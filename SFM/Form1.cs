@@ -7,6 +7,7 @@ using Microsoft.Office.Interop.Excel;
 using Microsoft.Office.Interop.PowerPoint;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace SFM
 {
@@ -110,13 +111,13 @@ namespace SFM
                 var windowControl = CreateWindow(selectedFile, x, y, windowWidth, windowHeight);
 
                 // Erstelle den Vollbild-Button
-                System.Windows.Forms.Button button = new System.Windows.Forms.Button();
-                button.Text = "Vollbild"; // Button-Text entsprechend des Index
-                button.Size = new Size(windowWidth / 4, 20); // Button-Größe auf ein Viertel der Fensterbreite und Höhe 20 setzen
-                System.Drawing.Point buttonLocation = new System.Drawing.Point(x + (windowWidth - button.Width) / 2, y + windowHeight);
-                button.Location = buttonLocation;
-                button.Click += (sender, e) => ToggleFullscreen(windowControl); // Event-Handler für den Button-Click hinzufügen
-                Controls.Add(button); // Button zum Formular hinzufügen
+                System.Windows.Forms.Button fullscreenButton = new System.Windows.Forms.Button();
+                fullscreenButton.Text = "Vollbild"; // Button-Text entsprechend des Index
+                fullscreenButton.Size = new Size(windowWidth / 4, 20); // Button-Größe auf ein Viertel der Fensterbreite und Höhe 20 setzen
+                System.Drawing.Point buttonLocation = new System.Drawing.Point(x + (windowWidth - fullscreenButton.Width) / 2, y + windowHeight);
+                fullscreenButton.Location = buttonLocation;
+                fullscreenButton.Click += (sender, e) => ToggleFullscreen(windowControl); // Event-Handler für den Button-Click hinzufügen
+                Controls.Add(fullscreenButton); // Button zum Formular hinzufügen
 
                 // Suche und entferne den "Datei auswählen"-Button
                 foreach (Control control in Controls)
@@ -127,11 +128,9 @@ namespace SFM
                         break; // Beende die Schleife, sobald der Button gefunden und entfernt wurde
                     }
                 }
-
-                // Füge die Zuordnung zwischen Fenster und Button zum Dictionary hinzu
-                windowButtonMap.Add(windowControl, button);
             }
         }
+
         private Control CreateWindow(string url, int x, int y, int width, int height)
         {
             Control windowControl = null;
@@ -165,6 +164,14 @@ namespace SFM
             {
                 Microsoft.Office.Interop.PowerPoint.Application powerPointApp = new Microsoft.Office.Interop.PowerPoint.Application();
                 var presentation = powerPointApp.Presentations.Open(url);
+
+                // Überprüfe, ob das Fenster maximiert oder minimiert ist
+                if (presentation.Windows[1].WindowState != Microsoft.Office.Interop.PowerPoint.PpWindowState.ppWindowNormal)
+                {
+                    presentation.Windows[1].WindowState = Microsoft.Office.Interop.PowerPoint.PpWindowState.ppWindowNormal;
+                }
+
+                // Ändere die Breite des Fensters
                 presentation.Windows[1].Width = width;
                 presentation.Windows[1].Height = height;
 
@@ -184,6 +191,7 @@ namespace SFM
 
                 windowControl = panel;
             }
+
             else if (url.EndsWith(".pdf") || url.EndsWith(".html"))
             {
                 WebBrowser webBrowser = new WebBrowser
@@ -194,6 +202,7 @@ namespace SFM
                 };
 
                 webBrowser.Navigate(url);
+                webBrowser.NewWindow += new CancelEventHandler(webBrowser_NewWindow);
                 Controls.Add(webBrowser);
 
                 windowControl = webBrowser;
@@ -208,6 +217,7 @@ namespace SFM
                 };
 
                 webBrowser.Navigate(url);
+                webBrowser.NewWindow += new CancelEventHandler(webBrowser_NewWindow);
                 Controls.Add(webBrowser);
 
                 windowControl = webBrowser;
@@ -216,6 +226,20 @@ namespace SFM
             return windowControl;
         }
 
+        private void webBrowser_NewWindow(object sender, CancelEventArgs e)
+        {
+            e.Cancel = true;
+            WebBrowser webBrowser = sender as WebBrowser;
+            if (webBrowser != null)
+            {
+                HtmlElement link = webBrowser.Document.ActiveElement;
+                if (link != null && link.TagName == "A")
+                {
+                    string url = link.GetAttribute("href");
+                    webBrowser.Navigate(url);
+                }
+            }
+        }
         private void ToggleFullscreen(Control control)
         {
             if (fullscreenForm == null)
