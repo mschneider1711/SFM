@@ -1,0 +1,15 @@
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.csproj.AssemblyReference.cache
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.Properties.Resources.resources
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.csproj.GenerateResource.cache
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.csproj.CoreCompileInputs.cache
+C:\Users\marc\source\repos\SFM\SFM\bin\Debug\SFM.exe.config
+C:\Users\marc\source\repos\SFM\SFM\bin\Debug\SFM.exe
+C:\Users\marc\source\repos\SFM\SFM\bin\Debug\SFM.pdb
+C:\Users\marc\source\repos\SFM\SFM\bin\Debug\PdfiumViewer.dll
+C:\Users\marc\source\repos\SFM\SFM\bin\Debug\PdfiumViewer.xml
+C:\Users\marc\source\repos\SFM\SFM\bin\Debug\nl\PdfiumViewer.resources.dll
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.Form1.resources
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.csproj.CopyComplete
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.exe
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.pdb
+C:\Users\marc\source\repos\SFM\SFM\obj\Debug\SFM.csproj.ResolveComReference.cache
