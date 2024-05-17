@@ -8,6 +8,8 @@ using Microsoft.Office.Interop.PowerPoint;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+
 
 namespace SFM
 {
@@ -25,10 +27,62 @@ namespace SFM
         [DllImport("user32.dll")]
         public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
 
+        // Pfad zu den Ordnern Fenster1 bis Fenster6
+        private string[] folderPaths = new string[6];
+
         public Form1()
         {
             InitializeComponent();
+
+            // Setze die Pfadvariablen für Fenster1-Fenster6
+            string projectDirectory = Directory.GetCurrentDirectory();
+            string parentDirectory = Directory.GetParent(projectDirectory).FullName; // Ein Verzeichnis über dem Projektverzeichnis
+            string grandParentDirectory = Directory.GetParent(parentDirectory).FullName; // Zwei Verzeichnisse über dem Projektverzeichnis
+            string greatGrandParentDirectory = Directory.GetParent(grandParentDirectory).FullName; // Drei Verzeichnisse über dem Projektverzeichnis
+            for (int i = 0; i < 6; i++)
+            {
+                folderPaths[i] = Path.Combine(greatGrandParentDirectory, $"Fenster{i + 1}");
+            }
+
+            // Frage den Benutzer, ob das Dashboard leer geöffnet werden soll
+            DialogResult result = MessageBox.Show("Möchten Sie das Dashboard leer öffnen?", "Dashboard öffnen", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result == DialogResult.Yes)
+            {
+                // Lösche den Inhalt der Ordner Fenster1-Fenster6
+                foreach (string folderPath in folderPaths)
+                {
+                    DeleteFolderContents(folderPath);
+                }
+            }
+
             InitializeDashboard();
+            // Binden des FormClosing-Ereignisses an die Form1_FormClosing-Methode
+            this.FormClosing += Form1_FormClosing;
+        }
+
+        // Methode zum Löschen des Inhalts eines Ordners
+        private void DeleteFolderContents(string folderPath)
+        {
+            try
+            {
+                // Lösche alle Dateien im Ordner
+                foreach (string file in Directory.GetFiles(folderPath))
+                {
+                    File.Delete(file);
+                }
+
+                // Lösche alle Unterverzeichnisse und ihre Inhalte
+                foreach (string directory in Directory.GetDirectories(folderPath))
+                {
+                    DeleteFolderContents(directory);
+                    Directory.Delete(directory);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Behandle etwaige Ausnahmen, z.B. Zugriffsverweigerungen
+                MessageBox.Show($"Fehler beim Löschen des Ordners {folderPath}: {ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void InitializeDashboard()
@@ -107,8 +161,27 @@ namespace SFM
                 // Eine Datei wurde ausgewählt
                 string selectedFile = openFileDialog.FileName;
 
+                // Kopiere die ausgewählte Datei in den entsprechenden Ordner
+                string destinationDirectory = directoryPath;
+                string destinationFile = Path.Combine(destinationDirectory, Path.GetFileName(selectedFile));
+                File.Copy(selectedFile, destinationFile, true);
+
                 // Erstelle das Fenster mit der ausgewählten Datei
-                var windowControl = CreateWindow(selectedFile, x, y, windowWidth, windowHeight);
+                var windowControl = CreateWindow(destinationFile, x, y, windowWidth, windowHeight);
+
+                // Suche und entferne den "Datei auswählen"-Button, der sich in der Mitte des Fensters befindet
+                foreach (Control control in Controls)
+                {
+                    if (control is System.Windows.Forms.Button && control.Text == "Datei auswählen")
+                    {
+                        // Überprüfe, ob der Button in der Mitte des aktuellen Fensters liegt
+                        if (Math.Abs(control.Location.X + control.Width / 2 - (x + windowWidth / 2)) <= 5 && Math.Abs(control.Location.Y + control.Height / 2 - (y + windowHeight / 2)) <= 5)
+                        {
+                            Controls.Remove(control);
+                            break; // Beende die Schleife, sobald der Button gefunden und entfernt wurde
+                        }
+                    }
+                }
 
                 // Erstelle den Vollbild-Button
                 System.Windows.Forms.Button fullscreenButton = new System.Windows.Forms.Button();
@@ -118,18 +191,10 @@ namespace SFM
                 fullscreenButton.Location = buttonLocation;
                 fullscreenButton.Click += (sender, e) => ToggleFullscreen(windowControl); // Event-Handler für den Button-Click hinzufügen
                 Controls.Add(fullscreenButton); // Button zum Formular hinzufügen
-
-                // Suche und entferne den "Datei auswählen"-Button
-                foreach (Control control in Controls)
-                {
-                    if (control is System.Windows.Forms.Button && control.Text == "Datei auswählen")
-                    {
-                        Controls.Remove(control);
-                        break; // Beende die Schleife, sobald der Button gefunden und entfernt wurde
-                    }
-                }
             }
         }
+
+
 
         private Control CreateWindow(string url, int x, int y, int width, int height)
         {
@@ -249,52 +314,17 @@ namespace SFM
                 fullscreenForm.FormBorderStyle = FormBorderStyle.None;
                 fullscreenForm.WindowState = FormWindowState.Maximized;
 
-                // Erstelle ein Duplikat des Steuerelements entsprechend seines Typs
                 if (control is WebBrowser)
                 {
+                    // Erstelle ein Duplikat des WebBrowser-Elements
                     WebBrowser browserDuplicate = new WebBrowser
                     {
                         ScriptErrorsSuppressed = true,
                         Size = new System.Drawing.Size(Screen.PrimaryScreen.WorkingArea.Width, Screen.PrimaryScreen.WorkingArea.Height - 40),
                     };
-                    //browserDuplicate.Height = Screen.PrimaryScreen.WorkingArea.Height - 40;
-                    //browserDuplicate.Width = Screen.PrimaryScreen.WorkingArea.Width;
                     browserDuplicate.Url = ((WebBrowser)control).Url;
 
                     fullscreenForm.Controls.Add(browserDuplicate);
-                }
-                else if (control is Panel)
-                {
-                    Panel panelDuplicate = new Panel();
-                    panelDuplicate.Size = ((Panel)control).Size;
-                    panelDuplicate.Location = System.Drawing.Point.Empty;
-
-                    foreach (Control ctrl in ((Panel)control).Controls)
-                    {
-                        Control ctrlDuplicate = null;
-                        if (ctrl is WebBrowser)
-                        {
-                            WebBrowser webBrowser = new WebBrowser();
-                            webBrowser.Size = ctrl.Size;
-                            webBrowser.Url = ((WebBrowser)ctrl).Url;
-                            ctrlDuplicate = webBrowser;
-                        }
-                        else
-                        {
-                            Microsoft.Office.Interop.Excel.Workbook workbook = (Microsoft.Office.Interop.Excel.Workbook)ctrl;
-                            Microsoft.Office.Interop.Excel.Application excelApp = workbook.Application;
-                            excelApp.Visible = true;
-                            workbook.Windows[1].WindowState = Microsoft.Office.Interop.Excel.XlWindowState.xlMaximized;
-
-                            // Füge die Excel-Anwendung selbst zum Panel hinzu
-                            IntPtr hwnd = new IntPtr(excelApp.Hwnd);
-                            SetParent(hwnd, panelDuplicate.Handle);
-                            continue;
-                        }
- 
-                    }
-
-                    fullscreenForm.Controls.Add(panelDuplicate);
                 }
 
                 // Zeige das Vollbildformular an
@@ -318,6 +348,7 @@ namespace SFM
                 CenterControlInParent(control);
             }
         }
+
 
         private void ExitFullscreen()
         {
@@ -343,6 +374,25 @@ namespace SFM
 
         }
 
+        // Ereignisbehandlungsmethode für das Schließen des Formulars
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Beende alle laufenden Excel-Prozesse
+            var excelProcesses = System.Diagnostics.Process.GetProcessesByName("EXCEL");
+            foreach (var process in excelProcesses)
+            {
+                process.Kill();
+            }
+
+            // Beende alle laufenden PowerPoint-Prozesse
+            var powerPointProcesses = System.Diagnostics.Process.GetProcessesByName("POWERPNT");
+            foreach (var process in powerPointProcesses)
+            {
+                process.Kill();
+            }
+            // Kurze Verzögerung, um sicherzustellen, dass die Prozesse beendet werden
+            System.Threading.Thread.Sleep(1000); // Warten Sie 1 Sekunde (1000 Millisekunden)
+        }
         private void Form1_Load(object sender, EventArgs e)
         {
             // Code, der beim Laden des Formulars ausgeführt werden soll
