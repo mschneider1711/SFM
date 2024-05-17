@@ -21,7 +21,7 @@ namespace SFM
         Dictionary<Control, System.Windows.Forms.Button> windowButtonMap = new Dictionary<Control, System.Windows.Forms.Button>();
 
 
-        [DllImport("user32.dll", SetLastError = true)] 
+        [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 
         [DllImport("user32.dll")]
@@ -33,7 +33,14 @@ namespace SFM
         public Form1()
         {
             InitializeComponent();
+            CheckIsContent();
+            InitializeDashboard();
+            // Binden des FormClosing-Ereignisses an die Form1_FormClosing-Methode
+            this.FormClosing += Form1_FormClosing;
+        }
 
+        private void CheckIsContent()
+        {
             // Setze die Pfadvariablen für Fenster1-Fenster6
             string projectDirectory = Directory.GetCurrentDirectory();
             string parentDirectory = Directory.GetParent(projectDirectory).FullName; // Ein Verzeichnis über dem Projektverzeichnis
@@ -44,21 +51,32 @@ namespace SFM
                 folderPaths[i] = Path.Combine(greatGrandParentDirectory, $"Fenster{i + 1}");
             }
 
-            // Frage den Benutzer, ob das Dashboard leer geöffnet werden soll
-            DialogResult result = MessageBox.Show("Möchten Sie das Dashboard leer öffnen?", "Dashboard öffnen", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (result == DialogResult.Yes)
+            // Überprüfe, ob mindestens ein Ordner Dateien enthält
+            bool anyFolderContainsFiles = false;
+            foreach (string folderPath in folderPaths)
             {
-                // Lösche den Inhalt der Ordner Fenster1-Fenster6
-                foreach (string folderPath in folderPaths)
+                if (Directory.Exists(folderPath) && Directory.GetFiles(folderPath).Length > 0)
                 {
-                    DeleteFolderContents(folderPath);
+                    anyFolderContainsFiles = true;
+                    break;
                 }
             }
 
-            InitializeDashboard();
-            // Binden des FormClosing-Ereignisses an die Form1_FormClosing-Methode
-            this.FormClosing += Form1_FormClosing;
+            // Wenn mindestens ein Ordner Dateien enthält, frage den Benutzer, ob das Dashboard leer geöffnet werden soll
+            if (anyFolderContainsFiles)
+            {
+                DialogResult result = MessageBox.Show("Möchten Sie das Dashboard leer öffnen?", "Dashboard öffnen", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes)
+                {
+                    // Lösche den Inhalt der Ordner Fenster1-Fenster6
+                    foreach (string folderPath in folderPaths)
+                    {
+                        DeleteFolderContents(folderPath);
+                    }
+                }
+            }
         }
+
 
         // Methode zum Löschen des Inhalts eines Ordners
         private void DeleteFolderContents(string folderPath)
@@ -395,7 +413,8 @@ namespace SFM
         }
         private void Form1_Load(object sender, EventArgs e)
         {
-            // Code, der beim Laden des Formulars ausgeführt werden soll
+
         }
+
     }
 }
